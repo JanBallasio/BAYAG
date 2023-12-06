@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "23352828727",
+    "project_id": "hahahahha-7cf64",
+    "storage_bucket": "hahahahha-7cf64.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:23352828727:android:340af5986f5257cb6d30b2",
+        "android_client_info": {
+          "package_name": "com.bolshet.notif"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCrXqvD_eQLBye3nkhV5EA8zgWbyHPc43w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
