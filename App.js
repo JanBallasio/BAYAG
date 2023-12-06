@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Button,
   StyleSheet,
@@ -15,6 +15,7 @@ import { getDocs, query, where } from "firebase/firestore";
 import Icon from "react-native-vector-icons/FontAwesome";
 import * as Notifications from "expo-notifications";
 
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -29,31 +30,50 @@ export default function App() {
   const [time, setTime] = useState(new Date());
   const [showDate, setShowDate] = useState(false);
   const [showTime, setShowTime] = useState(false);
-  const [token, setToken] = useState(null);
+  const [notifyMinutes, setNotifyMinutes] = useState(0); 
+  const [scheduledNotifications, setScheduledNotifications] = useState([]);
+  const [notificationsScheduled, setNotificationsScheduled] = useState(false);
 
-  async function scheduleNotification(name, dateTime) {
+
+  async function scheduleNotification(name, seconds, isTimeUp = false, identifier) {
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: "Good Day " + name,
-        body: "Your time is near",
+        title: isTimeUp ? "Time's Up " + name : "Good Day " + name,
+        body: isTimeUp ? "Yaks Natay" : "Matmatay Kan",
         data: { data: "goes here" },
       },
-      trigger: dateTime,
+      trigger: { seconds },
     });
+    setScheduledNotifications([...scheduledNotifications, identifier]);
   }
+  
   async function fetchAndScheduleNotification() {
     const q = query(collection(db, "bolshet"));
     const querySnapshot = await getDocs(q);
-    querySnapshot.forEach((doc) => {
+    
+    for (const doc of querySnapshot.docs) {
       const data = doc.data();
       const dateTime = data.date.toDate();
       const name = data.name;
       const diffInSeconds = (dateTime.getTime() - new Date().getTime()) / 1000;
-      if (diffInSeconds > 30) {
-        scheduleNotification(name, { seconds: diffInSeconds - 30 });
+      const identifierGoodDay = `${name}-${dateTime.getTime()}-goodday`;
+      const identifierTimesUp = `${name}-${dateTime.getTime()}-timesup`;
+  
+      if (diffInSeconds > notifyMinutes * 60 && !scheduledNotifications.includes(identifierGoodDay)) {
+        await scheduleNotification(name, diffInSeconds - notifyMinutes * 60, false, identifierGoodDay); 
+        setScheduledNotifications([...scheduledNotifications, identifierGoodDay]);
+      } else if (diffInSeconds > 0 && !scheduledNotifications.includes(identifierTimesUp)) {
+        await scheduleNotification(name, diffInSeconds, true, identifierTimesUp); 
+        setScheduledNotifications([...scheduledNotifications, identifierTimesUp]);
       }
-    });
-  }
+    }
+  }  
+  useEffect(() => {
+    if (!notificationsScheduled) {
+      fetchAndScheduleNotification();
+      setNotificationsScheduled(true);
+    }
+  }, [notificationsScheduled]);
   async function create() {
     const offset = -8;
     const hours = time.getHours() + offset;
@@ -70,15 +90,14 @@ export default function App() {
     await addDoc(collection(db, "bolshet"), {
       date: dateTime,
       time: dateTime,
-      name: name
+      name: name,
     });
 
     await Notifications.scheduleNotificationAsync({
       content: {
         title: "Good Day " + name,
         body:
-          "We will remind you on " +
-          "30 seconds before " +
+          "You have created a schedule due on" +
           dateTime.toLocaleString(),
         data: { data: "goes here" },
       },
@@ -110,7 +129,7 @@ export default function App() {
   React.useEffect(() => {
     const intervalId = setInterval(fetchAndScheduleNotification, 60 * 1000);
     return () => {
-      clearInterval(intervalId); 
+      clearInterval(intervalId);
     };
   }, []);
   return (
@@ -166,6 +185,20 @@ export default function App() {
           onChange={onTimeChange}
         />
       )}
+      <Text>Notify me before  (Minutes)</Text>
+      <TextInput
+        value={notifyMinutes.toString()}
+        onChangeText={(minutes) => {
+          const parsedMinutes = parseInt(minutes);
+          if (!isNaN(parsedMinutes)) {
+            setNotifyMinutes(parsedMinutes);
+          } else {
+            setNotifyMinutes(0);
+          }
+        }}
+        placeholder="Notify minutes before"
+        style={styles.textBoxes}
+      ></TextInput>
       <Button title="Set Reminder" onPress={create}></Button>
     </View>
   );
